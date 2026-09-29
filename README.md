@@ -2,7 +2,7 @@
 
 This repository ports Copus Proof of Experience (PoE) to Solana. Solana's [Devnet](https://solana.com/docs/references/clusters) is the public application test cluster; Solana's cluster named “Testnet” is primarily for validator and network stress tests. This implementation targets Devnet for a hackathon demo.
 
-**Status:** the Solana program, matching Circom v2 verifier, SPL Token funding, private prover service, finalized claim indexer, client transaction builders, and local end-to-end test are implemented. The SBF binary builds and executes a real proof under the normal 200,000 compute-unit limit. Devnet deployment is pending faucet funding. The Copus backend does not yet recognize Solana accounts or post Solana claims to the TIME ledger; the included settlement stub demonstrates idempotent credit locally.
+**Status:** the Solana program, matching Circom v2 verifier, SPL Token funding, encrypted batch issuer, private prover and relayer, finalized claim indexer, client transaction builders, and local end-to-end test are implemented. The SBF binary builds and executes a real proof under the normal 200,000 compute-unit limit. Devnet deployment is pending faucet funding. The Copus backend does not yet recognize Solana accounts or post Solana claims to the TIME ledger; the included settlement stub demonstrates idempotent credit locally.
 
 ## On-chain flow
 
@@ -40,7 +40,9 @@ solana program deploy --url devnet --keypair /path/to/payer.json \
 
 Set `SOLANA_KEYPAIR_PATH`, `POE_PROGRAM_ID`, and a different `POE_TREASURY_ADDRESS`; optionally set `SOLANA_RPC_URL` to a Devnet RPC. Run `pnpm demo:devnet` against a newly deployed program. The demo creates a freely mintable six-decimal SPL token, commits a public test fixture, funds one campaign, claims with a real proof, and checks the claim PDA and treasury balance. It does not mint real USDC or credit TIME.
 
-For the local settlement loop, set distinct `SETTLEMENT_TOKEN` and `PROVER_TOKEN` values from `.env.example`. Register a subject mapping before the claim with `node services/indexer.js register 1 <nullifier-hex> demo-reader`, using the fixture's `nullifier` field. Run `pnpm settlement:stub` and `pnpm indexer` in separate terminals. The indexer scans finalized transactions, validates the claim PDA and campaign data, and POSTs one idempotent `timeSeconds` credit to the local stub. `pnpm prover` exposes the private v2 proof service on loopback; it requires bearer auth. These services do not write to Copus's production TIME ledger.
+For a private batch, prepare policy and receipt JSON files outside Git, set `BATCH_ENCRYPTION_KEY` to 64 random hex characters, and run `pnpm issuer:batch`. The issuer commits the Merkle root and writes receipt paths only to an AES-GCM encrypted archive with owner-only permissions. `pnpm prover` accepts a receipt and path over a bearer-authenticated loopback API. `pnpm relayer` registers the authenticated Copus subject mapping before sending a claim.
+
+For the local settlement loop, set distinct `SETTLEMENT_TOKEN`, `RELAYER_TOKEN` and `PROVER_TOKEN` values from `.env.example`. If claiming directly through the demo script, register a subject mapping first with `node services/indexer.js register 1 <nullifier-hex> demo-reader`, using the fixture's `nullifier` field. Run `pnpm settlement:stub` and `pnpm indexer` in separate terminals. The indexer scans finalized transactions, validates the claim PDA and campaign data, and POSTs one idempotent `timeSeconds` credit to the local stub. These services do not write to Copus's production TIME ledger.
 
 The program ID, payer and treasury public keys may be shared; **never commit the keypair JSON files**. The demo fixture is public data and must not be used as an account-bound real-user receipt. A production integration needs a Solana wallet-to-Copus-subject binding, authenticated fact issuance, and idempotent TIME settlement in the Copus backend.
 

@@ -10,6 +10,7 @@ class Store {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     if (!fs.existsSync(file)) fs.closeSync(fs.openSync(file, "wx", 0o600));
     this.db = new DatabaseSync(file);
+    this.db.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
     this.db.exec(`CREATE TABLE IF NOT EXISTS metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS subjects (campaign_id TEXT NOT NULL, nullifier TEXT NOT NULL,
         subject_ref TEXT NOT NULL, PRIMARY KEY(campaign_id, nullifier));

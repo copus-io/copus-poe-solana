@@ -6,6 +6,8 @@
     "proof:fixture": "node scripts/proof-fixture.js",
     "demo:devnet": "node scripts/demo-devnet.js",
     "prover": "node services/prover.js",
+    "issuer:batch": "node scripts/issue-batch.js",
+    "relayer": "node services/relayer.js",
     "indexer": "node services/indexer.js",
     "settlement:stub": "node services/settlement-stub.js",
     "campaign:prepare": "node scripts/prepare-v2-campaign.js",

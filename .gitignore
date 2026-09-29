@@ -12,3 +12,4 @@ receipts*.json
 policy*.json
 batch*.json
 *.enc
+*.enc.json
