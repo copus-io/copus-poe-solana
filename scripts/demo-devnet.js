@@ -20,6 +20,19 @@ async function main() {
     throw new Error("SOLANA_KEYPAIR_PATH, POE_PROGRAM_ID and POE_TREASURY_ADDRESS are required");
   }
   const connection = new Connection(rpcUrl, "confirmed");
+  // Public Devnet RPC nodes can disagree about block height after a transaction
+  // lands. Check the signature before treating a block-height timeout as failure.
+  const confirmTransaction = connection.confirmTransaction.bind(connection);
+  connection.confirmTransaction = async (...args) => {
+    try { return await confirmTransaction(...args); }
+    catch (error) {
+      if (error.name !== "TransactionExpiredBlockheightExceededError") throw error;
+      const signature = typeof args[0] === "string" ? args[0] : args[0].signature;
+      const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+      if (!status.value || status.value.err) throw error;
+      return status;
+    }
+  };
   const payer = client.readKeypair(process.env.SOLANA_KEYPAIR_PATH);
   const programId = new PublicKey(process.env.POE_PROGRAM_ID);
   const treasury = new PublicKey(process.env.POE_TREASURY_ADDRESS);
