@@ -1,0 +1,14 @@
+node_modules/
+target/
+zk-v2-build/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*-keypair.json
+wallet.json
+receipts*.json
+policy*.json
+batch*.json
+*.enc

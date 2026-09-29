@@ -1,0 +1,25 @@
+[package]
+name = "copus-poe-solana"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+borsh = { version = "1.5", features = ["derive"] }
+bincode = "1"
+groth16-solana = { git = "https://github.com/Lightprotocol/groth16-solana", rev = "ac9d959f9b14479c20c9d4f8168fa4cc47c13071" }
+solana-program = "2.2"
+spl-token = { version = "7", features = ["no-entrypoint"] }
+
+[build-dependencies]
+groth16-solana = { git = "https://github.com/Lightprotocol/groth16-solana", rev = "ac9d959f9b14479c20c9d4f8168fa4cc47c13071", features = ["circom-vk"] }
+
+[dev-dependencies]
+serde_json = "1"
+hex = "0.4"
+solana-program-test = "=2.2.7"
+solana-sdk = "=2.2.2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

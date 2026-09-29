@@ -1,0 +1,27 @@
+{
+  "name": "copus-poe-solana-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "proof:fixture": "node scripts/proof-fixture.js",
+    "demo:devnet": "node scripts/demo-devnet.js",
+    "prover": "node services/prover.js",
+    "indexer": "node services/indexer.js",
+    "settlement:stub": "node services/settlement-stub.js",
+    "campaign:prepare": "node scripts/prepare-v2-campaign.js",
+    "test:client": "node --test test/*.test.js",
+    "circuit:build": "bash scripts/build-circuit-v2.sh",
+    "circuit:setup:dev": "bash scripts/setup-v2-dev-keys.sh"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "borsh": "^2.0.0",
+    "bs58": "^6.0.0",
+    "circom2": "0.2.23",
+    "circomlib": "2.0.5",
+    "circomlibjs": "0.1.7",
+    "ethers": "6.17.0",
+    "snarkjs": "0.7.6"
+  }
+}
