@@ -2,7 +2,7 @@
 
 This repository ports Copus Proof of Experience (PoE) to Solana. Solana's [Devnet](https://solana.com/docs/references/clusters) is the public application test cluster; Solana's cluster named “Testnet” is primarily for validator and network stress tests. This implementation targets Devnet for a hackathon demo.
 
-**Status:** the Solana program, matching Circom v2 verifier, SPL Token funding, encrypted batch issuer, private prover and relayer, finalized claim indexer, client transaction builders, and local end-to-end test are implemented. The SBF binary builds and executes a real proof under the normal 200,000 compute-unit limit. Devnet deployment is pending faucet funding. The Copus backend does not yet recognize Solana accounts or post Solana claims to the TIME ledger; the included settlement stub demonstrates idempotent credit locally.
+**Status:** the Solana program is deployed on Devnet and a funded proof and claim demo has succeeded. The matching Circom v2 verifier, SPL Token funding, encrypted batch issuer, private prover and relayer, finalized claim indexer, client transaction builders, and local end-to-end test are implemented. The SBF binary verifies a real proof under the normal 200,000 compute-unit limit. The Copus backend does not yet recognize Solana accounts or post Solana claims to the TIME ledger; the included settlement stub demonstrates idempotent credit locally.
 
 ## On-chain flow
 
@@ -30,6 +30,8 @@ The SBF test funds a campaign with a test SPL token, commits evidence, verifies 
 `pnpm circuit:setup:dev` generates another independent local test setup using fresh random contributions; run `pnpm proof:fixture` and rebuild the program afterward. The test setup is not a production multi-party trusted ceremony. Never combine this proof key with the Base Sepolia or Monad verifiers.
 
 ## Deploy and run the Devnet demo
+
+The public Devnet program ID is `8oUVMRStpkqaFCDSdqvP4fM7AEgv4CCEqJ4gu3jsoR65`. The first isolated demo used freely mintable SPL mint `7rTS5A4QTWLo1SbuMV3jXxtqmUcBqz2nLKDNM4EkjTyr`, committed batch `1`, funded campaign `1`, and completed a [proof claim](https://explorer.solana.com/tx/2vzAKu1hcWWqjx9Lvk62NXn22AtHDwyEXDsi5tHEMpRQ8mqBwQUevxRS53aeSnHu5prGzgNftNnqZ5zni51rvPcm?cluster=devnet). The [funding transaction](https://explorer.solana.com/tx/2aG3nNxxmojFbHVzAwukJkpjsEnzRcjJp53VBmcodRYqDDry4WQwvGUCLrr54YPyT46QNE6msDkjdNwSX4XR7VvY?cluster=devnet) transferred one test token to the demo treasury. This is public fixture evidence, not a Copus account-bound receipt or TIME credit.
 
 The program binary is `target/deploy/copus_poe_solana.so`. Keep the generated program keypair and payer keypair outside Git. Fund the payer with Devnet SOL, then deploy with the same payer as the future config administrator:
 
