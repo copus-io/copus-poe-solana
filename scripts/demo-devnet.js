@@ -20,18 +20,17 @@ async function main() {
     throw new Error("SOLANA_KEYPAIR_PATH, POE_PROGRAM_ID and POE_TREASURY_ADDRESS are required");
   }
   const connection = new Connection(rpcUrl, "confirmed");
-  // Public Devnet RPC nodes can disagree about block height after a transaction
-  // lands. Check the signature before treating a block-height timeout as failure.
-  const confirmTransaction = connection.confirmTransaction.bind(connection);
-  connection.confirmTransaction = async (...args) => {
-    try { return await confirmTransaction(...args); }
-    catch (error) {
-      if (error.name !== "TransactionExpiredBlockheightExceededError") throw error;
-      const signature = typeof args[0] === "string" ? args[0] : args[0].signature;
+  // Poll HTTP for confirmation; public Devnet WebSocket connections can time out
+  // behind a proxy even after the signed transaction has finalized.
+  connection.confirmTransaction = async (strategy) => {
+    const signature = typeof strategy === "string" ? strategy : strategy.signature;
+    for (let attempt = 0; attempt < 60; attempt++) {
       const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
-      if (!status.value || status.value.err) throw error;
-      return status;
+      if (status.value?.err) throw new Error(`transaction ${signature} failed: ${JSON.stringify(status.value.err)}`);
+      if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") return status;
+      await sleep(2_000);
     }
+    throw new Error(`transaction ${signature} did not confirm in 120 seconds`);
   };
   const payer = client.readKeypair(process.env.SOLANA_KEYPAIR_PATH);
   const programId = new PublicKey(process.env.POE_PROGRAM_ID);
