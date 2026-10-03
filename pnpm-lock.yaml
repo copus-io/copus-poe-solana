@@ -35,6 +35,9 @@ importers:
       snarkjs:
         specifier: 0.7.6
         version: 0.7.6
+      undici:
+        specifier: ^6.29.0
+        version: 6.29.0
 
 packages:
 
@@ -737,6 +740,10 @@ packages:
 
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+
+  undici@6.29.0:
+    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+    engines: {node: '>=18.17'}
 
   utf-8-validate@6.0.6:
     resolution: {integrity: sha512-q3l3P9UtEEiAHcsgsqTgf9PPjctrDWoIXW3NpOHFdRDbLvu4DLIcxHangJ4RLrWkBcKjmcs/6NkerI8T/rE4LA==}
@@ -1810,6 +1817,8 @@ snapshots:
   undici-types@6.19.8: {}
 
   undici-types@8.9.0: {}
+
+  undici@6.29.0: {}
 
   utf-8-validate@6.0.6:
     dependencies:

@@ -6,9 +6,13 @@ const bs58 = require("bs58").default;
 const client = require("../scripts/client");
 
 class Store {
-  constructor(file) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    if (!fs.existsSync(file)) fs.closeSync(fs.openSync(file, "wx", 0o600));
+  constructor(file, { now = Date.now } = {}) {
+    this.now = now;
+    if (file !== ":memory:") {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      if (!fs.existsSync(file)) fs.closeSync(fs.openSync(file, "wx", 0o600));
+      fs.chmodSync(file, 0o600);
+    }
     this.db = new DatabaseSync(file);
     this.db.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
     this.db.exec(`CREATE TABLE IF NOT EXISTS metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -16,6 +20,10 @@ class Store {
         subject_ref TEXT NOT NULL, PRIMARY KEY(campaign_id, nullifier));
       CREATE TABLE IF NOT EXISTS signatures (signature TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'pending');
       CREATE TABLE IF NOT EXISTS settlements (event_key TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'pending');`);
+    const columns = new Set(this.db.prepare("PRAGMA table_info(signatures)").all().map((row) => row.name));
+    for (const [name, type] of Object.entries({ attempts: "INTEGER NOT NULL DEFAULT 0", next_attempt: "INTEGER NOT NULL DEFAULT 0", last_error: "TEXT" })) {
+      if (!columns.has(name)) this.db.exec(`ALTER TABLE signatures ADD COLUMN ${name} ${type}`);
+    }
   }
   cursor() { return this.db.prepare("SELECT value FROM metadata WHERE name='cursor'").get()?.value || null; }
   discover(signatures) {
@@ -34,12 +42,25 @@ class Store {
     this.db.prepare("INSERT OR IGNORE INTO subjects VALUES (?,?,?)").run(String(campaignId), nullifier, subjectRef);
     const existing = this.subject(campaignId, nullifier);
     if (existing !== subjectRef) throw new Error("claim mapping is first-writer-wins");
+    // Mapping arrival wakes deferred work; quarantine still requires an explicit retry.
+    this.db.exec("UPDATE signatures SET next_attempt=0 WHERE status='pending'");
   }
   subject(campaignId, nullifier) {
     return this.db.prepare("SELECT subject_ref FROM subjects WHERE campaign_id=? AND nullifier=?")
       .get(String(campaignId), nullifier)?.subject_ref || null;
   }
-  pendingSignatures() { return this.db.prepare("SELECT signature FROM signatures WHERE status='pending' ORDER BY rowid LIMIT 100").all().map((r) => r.signature); }
+  pendingSignatures() { return this.db.prepare("SELECT signature FROM signatures WHERE status='pending' AND next_attempt<=? ORDER BY next_attempt, rowid LIMIT 100").all(this.now()).map((r) => r.signature); }
+  defer(signature, error, maxAttempts = 20) {
+    const row = this.db.prepare("SELECT attempts FROM signatures WHERE signature=?").get(signature);
+    const attempts = (row?.attempts || 0) + 1;
+    const delay = Math.min(3_600_000, 10_000 * 2 ** Math.min(attempts - 1, 9));
+    this.db.prepare("UPDATE signatures SET attempts=?, next_attempt=?, last_error=?, status=? WHERE signature=?")
+      .run(attempts, this.now() + delay, String(error).slice(0, 500), attempts >= maxAttempts ? "quarantined" : "pending", signature);
+  }
+  retry(signature) {
+    return this.db.prepare("UPDATE signatures SET status='pending', attempts=0, next_attempt=0, last_error=NULL WHERE signature=? AND status!='complete'").run(signature);
+  }
+  quarantined() { return this.db.prepare("SELECT signature, attempts, last_error FROM signatures WHERE status='quarantined'").all(); }
   completed(eventKey) { return this.db.prepare("SELECT status FROM settlements WHERE event_key=?").get(eventKey)?.status === "complete"; }
   completeEvent(eventKey) { this.db.prepare("INSERT INTO settlements(event_key,status) VALUES (?,'complete') ON CONFLICT(event_key) DO UPDATE SET status='complete'").run(eventKey); }
   completeSignature(signature) { this.db.prepare("UPDATE signatures SET status='complete' WHERE signature=?").run(signature); }
@@ -78,7 +99,7 @@ async function claimPayload(connection, programId, signature, index, parsed) {
 }
 
 class Indexer {
-  constructor({ connection, programId, store, settle }) { Object.assign(this, { connection, programId, store, settle }); }
+  constructor({ connection, programId, store, settle, maxAttempts = 20 }) { Object.assign(this, { connection, programId, store, settle, maxAttempts }); }
   async discover() {
     const previous = this.store.cursor();
     let before;
@@ -99,7 +120,10 @@ class Indexer {
       { commitment: "finalized", maxSupportedTransactionVersion: 0 });
     if (!tx) return false;
     if (tx.meta?.err) { this.store.completeSignature(signature); return true; }
-    const instructions = tx.transaction.message.instructions;
+    // CPI claims have the same account/proof checks as top-level claims. Give
+    // them stable event indices after the top-level instruction range.
+    const instructions = [...tx.transaction.message.instructions,
+      ...(tx.meta?.innerInstructions || []).flatMap((group) => group.instructions)];
     for (let index = 0; index < instructions.length; index++) {
       const parsed = parseClaim(instructions[index], this.programId);
       if (!parsed) continue;
@@ -119,8 +143,11 @@ class Indexer {
     let completed = 0;
     let pending = 0;
     for (const signature of this.store.pendingSignatures()) {
-      try { if (await this.processSignature(signature)) completed++; else pending++; }
-      catch (error) { pending++; console.error(`settlement ${signature}: ${error.message}`); }
+      try {
+        if (await this.processSignature(signature)) completed++;
+        else { pending++; this.store.defer(signature, "transaction or subject mapping unavailable", this.maxAttempts); }
+      }
+      catch (error) { pending++; this.store.defer(signature, error.message, this.maxAttempts); console.error(`settlement ${signature}: ${error.message}`); }
     }
     return { discovered, completed, pending };
   }
@@ -141,6 +168,13 @@ async function main() {
     store.register(campaignId, nullifier, subjectRef);
     store.close();
     return;
+  }
+  if (process.argv[2] === "retry") {
+    if (!process.argv[3]) throw new Error("retry requires a transaction signature");
+    store.retry(process.argv[3]); store.close(); return;
+  }
+  if (process.argv[2] === "quarantine") {
+    console.log(JSON.stringify(store.quarantined())); store.close(); return;
   }
   if (!process.env.POE_PROGRAM_ID || !process.env.SETTLEMENT_URL || !process.env.SETTLEMENT_TOKEN) {
     throw new Error("POE_PROGRAM_ID, SETTLEMENT_URL and SETTLEMENT_TOKEN are required");

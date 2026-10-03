@@ -1,0 +1,49 @@
+name: Solana verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:demo
+      - run: pnpm test:client
+      - run: pnpm circuit:build
+      - run: cmp zk-v2-build/poe-v2_js/poe-v2.wasm zk-v2-artifacts/poe-v2.wasm
+      - run: cd zk-v2-artifacts && sha256sum -c SHA256SUMS
+  program:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked -p copus-poe-solana
+  sbf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pinned Agave CLI from the official release
+        run: |
+          curl -sSfL https://github.com/anza-xyz/agave/releases/download/v2.2.7/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o /tmp/agave.tar.bz2
+          tar -xjf /tmp/agave.tar.bz2 -C /tmp
+          echo "/tmp/solana-release/bin" >> "$GITHUB_PATH"
+      - run: cargo build-sbf --manifest-path program/Cargo.toml
+      - run: POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/target/deploy" cargo test --locked -p copus-poe-solana --test flow
+      - name: Verify bundled reviewer program with the real proof flow
+        run: POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/program-binary" cargo test --locked -p copus-poe-solana --test flow

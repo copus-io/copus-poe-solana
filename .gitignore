@@ -13,3 +13,17 @@ policy*.json
 batch*.json
 *.enc
 *.enc.json
+
+# Isolated demo data and local credential files
+*.db
+*.db-shm
+*.db-wal
+.session.key
+poe.env
+issuer.env
+
+# Reviewer runtime data and private keys never belong in the repository
+.review-data/
+demo-data/
+operator.json
+session.key

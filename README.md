@@ -1,5 +1,17 @@
 # Copus PoE on Solana Devnet
 
+## Run the complete demo locally
+
+The repository includes the real English Copus UI. Start with Node.js 22+ and pnpm 10.15+:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm demo:product
+```
+
+First-time reviewers create their own testnet wallet/deployment and supply faucet gas. No private Copus checkout, production backend or shared issuer secret is required. **Follow the complete setup and expected click-by-click flow in [PRODUCT_DEMO.md](PRODUCT_DEMO.md).**
+
+
 This repository ports Copus Proof of Experience (PoE) to Solana. Solana's [Devnet](https://solana.com/docs/references/clusters) is the public application test cluster; Solana's cluster named “Testnet” is primarily for validator and network stress tests. This implementation targets Devnet for a hackathon demo.
 
 **Status:** the Solana program is deployed on Devnet and a funded proof and claim demo has succeeded. The matching Circom v2 verifier, SPL Token funding, encrypted batch issuer, private prover and relayer, finalized claim indexer, client transaction builders, and local end-to-end test are implemented. The SBF binary verifies a real proof under the normal 200,000 compute-unit limit. The Copus backend does not yet recognize Solana accounts or post Solana claims to the TIME ledger; the included settlement stub demonstrates idempotent credit locally.
@@ -49,3 +61,11 @@ For the local settlement loop, set distinct `SETTLEMENT_TOKEN`, `RELAYER_TOKEN` 
 The program ID, payer and treasury public keys may be shared; **never commit the keypair JSON files**. The demo fixture is public data and must not be used as an account-bound real-user receipt. A production integration needs a Solana wallet-to-Copus-subject binding, authenticated fact issuance, and idempotent TIME settlement in the Copus backend.
 
 See [Solana's program model](https://solana.com/docs/core/programs) and the [Groth16 Solana verifier](https://github.com/Lightprotocol/groth16-solana) used here.
+
+## Actual Copus product demo
+
+Run `pnpm demo:product` with [PRODUCT_DEMO.md](PRODUCT_DEMO.md). This connects the actual sponsor editor, reader card, clock and isolated TIME ledger to the matching v2 chain verifier. [SUBMISSION.md](SUBMISSION.md) contains only technical recording/evidence steps. The on-chain transactions are real; experience summaries and TIME balances are explicitly labeled demo fixtures.
+
+## Latest real UI acceptance (2026-10-04)
+
+The bundled UI created campaign 2, completed a [real proof claim](https://explorer.solana.com/tx/3inY3j6mYyYrRnFPu8eod28Z1bcmDgUWUFFutdPq2y3yjh2y6UqvYDE2SejnTkQb7HEimPbjiQNZsuA19vgyttpP?cluster=devnet) after [test-token funding](https://explorer.solana.com/tx/4gMiyjPVPTR5pzjhLcz3Qhqtt1UgKWYGs7ReGSusDRuCGzoz2MqX5JmYkKZNBGi7g1Tru4KUVD7ke7k4ikQZVHpd?cluster=devnet), credited 30 minutes and settled 13 seconds of reading. The browser made no external API requests. See [demo-evidence.json](demo-evidence.json) for exact network identifiers and checks.

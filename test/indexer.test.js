@@ -48,3 +48,23 @@ test("indexer waits for a subject mapping and credits one finalized claim once",
     assert.throws(() => store.register(1, nullifier.toString("hex"), "another-user"), /first-writer-wins/);
   } finally { store.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+
+test("missing mappings and poisoned signatures cannot starve later settlements", async () => {
+  let now = 1000;
+  const store = new Store(":memory:", {now: () => now});
+  try {
+    store.discover(Array.from({length:100}, (_,i) => `missing-${i}`));
+    const connection = {getSignaturesForAddress:async()=>[], getParsedTransaction:async()=>null};
+    const indexer = new Indexer({connection, programId:Keypair.generate().publicKey, store, settle:async()=>{}, maxAttempts:2});
+    assert.equal((await indexer.tick()).pending,100);
+    store.discover(["later-valid"]);
+    connection.getParsedTransaction=async(signature)=> signature==="later-valid" ? {meta:{err:null},transaction:{message:{instructions:[]}}} : null;
+    assert.equal((await indexer.tick()).completed,1);
+    now+=10000;
+    assert.equal((await indexer.tick()).pending,100);
+    assert.equal(store.quarantined().length,100);
+    store.retry("missing-0");
+    assert.deepEqual(store.pendingSignatures(),["missing-0"]);
+  } finally {store.close();}
+});
