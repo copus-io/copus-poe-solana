@@ -52,6 +52,7 @@ async function createChain() {
     async status(campaign,row) {
       const status=await connection.getSignatureStatus(row.tx,{searchTransactionHistory:true});
       if(status.value?.err)return {failed:'Claim failed on chain'};
+      if(!status.value && row.expires_at_block && await connection.getBlockHeight('confirmed')>row.expires_at_block)return {failed:'Claim expired before confirmation. Please try again.'};
       if(status.value?.confirmationStatus!=='finalized')return null;
       if(!row.nullifier)return null;
       const pda=client.claimPda(programId,campaign.id,Buffer.from(row.nullifier,'hex'));
@@ -87,12 +88,21 @@ async function createChain() {
       const nullifier=Buffer.from(result.nullifier,'hex');
       const claimPda=client.claimPda(programId,campaign.id,nullifier);
       if(await connection.getAccountInfo(claimPda))throw new Error('AlreadyClaimed');
-      const signature=await send(client.claim(programId,payer.publicKey,campaign.id,batch.batchId,nullifier,epoch,Buffer.from(result.proof,'hex')));
-      return {transactionHash:signature,epoch:String(epoch),nullifier:result.nullifier,
+      const latest=await connection.getLatestBlockhash('confirmed');
+      const transaction=new Transaction({feePayer:payer.publicKey,...latest}).add(client.claim(programId,payer.publicKey,campaign.id,batch.batchId,nullifier,epoch,Buffer.from(result.proof,'hex')));
+      transaction.sign(payer);
+      const bs58=require('bs58').default || require('bs58');
+      const signature=bs58.encode(transaction.signature);
+      const raw=transaction.serialize();
+      return {transactionHash:signature,epoch:String(epoch),nullifier:result.nullifier,expiresAtBlock:latest.lastValidBlockHeight,
         finalize:async()=>{
+          // The API persists this signed transaction's signature before any broadcast.
+          // An RPC timeout cannot erase the lookup key of a successful claim.
+          try{await connection.sendRawTransaction(raw,{skipPreflight:false,maxRetries:5});}catch(error){ /* Finality lookup, not an ambiguous RPC response, decides settlement. */ }
           for(let attempt=0;attempt<90;attempt++) {
             const status=await connection.getSignatureStatus(signature,{searchTransactionHistory:true});
             if(status.value?.err)throw new Error('claim transaction failed');
+            if(!status.value && await connection.getBlockHeight('confirmed')>latest.lastValidBlockHeight)throw new Error('Claim expired before confirmation. Please try again.');
             if(status.value?.confirmationStatus==='finalized') {
               const claim=await connection.getAccountInfo(claimPda,'finalized');
               if(!claim?.owner.equals(programId)||claim.data.readBigUInt64LE(0)!==BigInt(epoch))throw new Error('finalized claim PDA mismatch');

@@ -33,7 +33,7 @@ Install Rust, the Solana CLI with `cargo build-sbf`, Node.js 22 and pnpm. The so
 pnpm install --frozen-lockfile
 pnpm test:client
 cargo test -p copus-poe-solana
-cargo build-sbf --manifest-path program/Cargo.toml
+cargo build-sbf --tools-version v1.55 --arch v0 --manifest-path program/Cargo.toml
 POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/target/deploy" cargo test -p copus-poe-solana --test flow
 ```
 

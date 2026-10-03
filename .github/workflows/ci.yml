@@ -43,7 +43,7 @@ jobs:
           curl -sSfL https://github.com/anza-xyz/agave/releases/download/v2.2.7/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o /tmp/agave.tar.bz2
           tar -xjf /tmp/agave.tar.bz2 -C /tmp
           echo "/tmp/solana-release/bin" >> "$GITHUB_PATH"
-      - run: cargo build-sbf --manifest-path program/Cargo.toml
+      - run: cargo build-sbf --tools-version v1.55 --arch v0 --manifest-path program/Cargo.toml
       - run: POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/target/deploy" cargo test --locked -p copus-poe-solana --test flow
       - name: Verify bundled reviewer program with the real proof flow
         run: POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/program-binary" cargo test --locked -p copus-poe-solana --test flow
