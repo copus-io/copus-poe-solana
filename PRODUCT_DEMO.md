@@ -5,7 +5,7 @@
 - Node.js 22+, pnpm 10.15+, an internet connection and Devnet SOL for gas.
 - The Solana/Agave CLI for a first-time program deployment: <https://docs.anza.xyz/cli/install>. The matching compiled program is included in `program-binary/`; building Rust is optional for the UI walkthrough.
 - The real Copus UI is bundled in `demo-ui/copus-ui.tar.gz`; its hash and frontend commit are recorded in `demo-ui/manifest.json`. You do not need access to the private frontend repository.
-- All blockchain actions run on **Solana Devnet**. The normal review command never falls back to a local validator or mainnet.
+- By default, all blockchain actions run on **Solana Devnet**. The normal review command never falls back to a local validator or mainnet.
 
 ## Start from a fresh clone
 
@@ -65,7 +65,7 @@ The advanced `pnpm demo:frontend-dev` command is for maintainers with a local cu
 
 ## Why Devnet?
 
-Solana recommends Devnet for application developers; its cluster called Testnet primarily tests validator/network releases. This app verifies the Devnet genesis hash and refuses mainnet or a different cluster. See <https://solana.com/docs/references/clusters>.
+Solana recommends Devnet for application developers; its cluster called Testnet primarily tests validator/network releases. The normal review command verifies the Devnet genesis hash and refuses mainnet or a different cluster. The explicit local mode described above permits a loopback validator. See <https://solana.com/docs/references/clusters>.
 
 Indexer retry operations:
 
@@ -75,6 +75,22 @@ node services/indexer.js retry <signature>
 ```
 
 Unmapped/failed signatures back off and enter quarantine, so they cannot starve later valid claims. Settlement replay is idempotent; both top-level and CPI claims validate their accounts.
+
+## Run against a local Solana validator
+
+The explicit local mode uses a fresh local chain (not a Devnet fork), a separate operator/program, and free local SOL. The normal `demo:product` command still requires Devnet.
+
+```sh
+# Terminal 1; keep running. Resume this ledger on subsequent starts.
+solana-test-validator --ledger .review-data/solana-local/validator --rpc-port 8899 --bind-address 127.0.0.1 --quiet
+
+# Terminal 2
+POE_REVIEW_DATA="$PWD/.review-data/solana-local" pnpm demo:local
+```
+
+Open http://localhost:8792/time-sponsors?sponsorshipDemo=1 and follow the walkthrough above. The launcher deploys the checked-in program binary, initializes its config and SPL test mint, and funds its isolated operator through the local faucet. `POE_LOCAL_RPC_URL` can select another loopback HTTP RPC port. Local mode does not use `SOLANA_KEYPAIR_PATH` or `POE_PROGRAM_ID` from a Devnet setup. Local transaction signatures have no public explorer link; inspect them through the local RPC or `solana confirm -v --url http://127.0.0.1:8899 <signature>`.
+
+Stop both commands with Ctrl-C when finished. Preserve `.review-data/solana-local/` to resume the same chain and ledger; do not reset only the validator while retaining the application's TIME ledger.
 
 ### Create navigation
 

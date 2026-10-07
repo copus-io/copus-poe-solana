@@ -14,6 +14,7 @@
     "test:client": "node --test test/*.test.js",
     "circuit:build": "bash scripts/build-circuit-v2.sh",
     "circuit:setup:dev": "bash scripts/setup-v2-dev-keys.sh",
+    "demo:local": "node scripts/review-demo.js --local",
     "demo:product": "node scripts/review-demo.js",
     "demo:api": "node services/product-demo.js",
     "demo:frontend-dev": "bash scripts/run-product-demo.sh",

@@ -64,7 +64,7 @@ async function createChain() {
       const {parseClaim}=require('./indexer');
       const parsed=tx.transaction.message.instructions.map(ix=>parseClaim(ix,programId)).find(ix=>ix?.claimAccount.equals(pda)&&ix.campaignAccount.equals(client.campaignPda(programId,campaign.id))&&ix.epoch===BigInt(row.epoch));
       if(!parsed)return {failed:'No matching claim instruction'};
-      return {eventKey:`solana-devnet:${row.tx}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
+      return {eventKey:`${local?'solana-local':'solana-devnet'}:${row.tx}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
     },
     async fund(draft,prepared,receipt) {
       const {startsAt:start,endsAt:end}=validateCampaignSchedule(draft);
@@ -105,7 +105,7 @@ async function createChain() {
             if(status.value?.confirmationStatus==='finalized') {
               const claim=await connection.getAccountInfo(claimPda,'finalized');
               if(!claim?.owner.equals(programId)||claim.data.readBigUInt64LE(0)!==BigInt(epoch))throw new Error('finalized claim PDA mismatch');
-              return {eventKey:`solana-devnet:${signature}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
+              return {eventKey:`${local?'solana-local':'solana-devnet'}:${signature}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
             }
             await new Promise((resolve)=>setTimeout(resolve,2000));
           }
