@@ -4,6 +4,7 @@ const { buildBatchV2 } = require('../lib/poe-v2');
 const { prove } = require('./prover');
 const { byte32 } = require('../scripts/proof');
 const client = require('../scripts/client');
+const { validateCampaignSchedule } = require('./campaign-schedule');
 
 async function createChain() {
   if (!process.env.POE_PROGRAM_ID || !process.env.SOLANA_KEYPAIR_PATH) throw new Error('POE_PROGRAM_ID and SOLANA_KEYPAIR_PATH are required');
@@ -66,12 +67,10 @@ async function createChain() {
       return {eventKey:`solana-devnet:${row.tx}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
     },
     async fund(draft,prepared,receipt) {
+      const {startsAt:start,endsAt:end}=validateCampaignSchedule(draft);
       const retrospective = draft.mode==='RETROSPECTIVE';
       const batch = retrospective?await issue(receipt,prepared.provingPolicy):{};
       const id = (await config()).nextCampaignId;
-      const start = draft.startsAt?Math.floor(new Date(draft.startsAt).getTime()/1000):Math.floor(Date.now()/1000)+30;
-      const end = draft.unlimited?0:Math.floor(new Date(draft.endsAt).getTime()/1000);
-      if(!Number.isSafeInteger(start)||start<=Date.now()/1000||!Number.isSafeInteger(end)||(end&&end<=start)) throw new Error('invalid campaign dates');
       const period=draft.repeatClaim?draft.claimTimeMinutes*60:0;
       if (process.env.POE_DEMO_MINT_TEST_TOKEN === '1') await mintTo(connection,payer,cfg.fundingMint,from.address,payer,1_000_000);
       const signature=await send(client.fundAndActivate(programId,payer.publicKey,id,from.address,treasury.address,cfg.fundingMint,{
