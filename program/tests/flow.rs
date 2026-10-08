@@ -225,7 +225,7 @@ async fn funds_proves_claims_once_and_rejects_tampering() {
             starts_at: now,
             ends_at: 0,
             total_time_minutes: 30,
-            time_per_claim_minutes: 30,
+            time_per_claim_minutes: 10,
             claim_period_seconds: 0,
         },
     );

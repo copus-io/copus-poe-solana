@@ -387,8 +387,8 @@ fn fund_and_activate(
             && starts_at >= now
             && starts_at >= 0
             && (ends_at == 0 || ends_at > starts_at)
-            && total >= 30
-            && per_claim >= 30
+            && total >= 10
+            && per_claim >= 10
             && per_claim <= total
             && total.checked_rem(per_claim) == Some(0)
             && (period == 0 || period >= 60)
