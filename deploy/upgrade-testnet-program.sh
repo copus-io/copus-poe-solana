@@ -21,4 +21,13 @@ import json,sys
 with open('/tmp/copus-poe-devnet-program-info.json') as f: v=json.load(f)
 assert v.get('authority')==sys.argv[1], 'Operator must be the existing upgrade authority'
 PY
+extra=$(python3 - <<'SPACE'
+import json
+from pathlib import Path
+info=json.loads(Path('/tmp/copus-poe-devnet-program-info.json').read_text())
+delta=Path('program-binary/copus_poe_solana.so').stat().st_size-info['dataLen']
+print(max(0,(delta+10239)//10240*10240))
+SPACE
+)
+if (( extra > 0 )); then solana program extend "$program" "$extra" --url "$rpc" --keypair "$key"; fi
 solana program deploy --url "$rpc" --keypair "$key" --upgrade-authority "$key" --program-id "$program" program-binary/copus_poe_solana.so
