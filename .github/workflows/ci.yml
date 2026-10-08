@@ -48,6 +48,7 @@ jobs:
       - name: Verify bundled reviewer program with the real proof flow
         run: POE_TEST_SBF=1 SBF_OUT_DIR="$PWD/program-binary" cargo test --locked -p copus-poe-solana --test flow
       - name: Upload verified SBF program for testnet demo release
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: copus-poe-solana-sbf
