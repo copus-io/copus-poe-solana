@@ -67,12 +67,14 @@ async function createChain() {
       return {eventKey:`${local?'solana-local':'solana-devnet'}:${row.tx}:0`,timeSeconds:campaign.draft.claimTimeMinutes*60};
     },
     async fund(draft,prepared,receipt) {
-      const {startsAt:start,endsAt:end}=validateCampaignSchedule(draft);
+      validateCampaignSchedule(draft);
       const retrospective = draft.mode==='RETROSPECTIVE';
       const batch = retrospective?await issue(receipt,prepared.provingPolicy):{};
       const id = (await config()).nextCampaignId;
       const period=draft.repeatClaim?draft.claimTimeMinutes*60:0;
       if (process.env.POE_DEMO_MINT_TEST_TOKEN === '1') await mintTo(connection,payer,cfg.fundingMint,from.address,payer,1_000_000);
+      // Refresh the default start after evidence and mint confirmations; explicit dates stay fixed.
+      const {startsAt:start,endsAt:end}=validateCampaignSchedule(draft);
       const signature=await send(client.fundAndActivate(programId,payer.publicKey,id,from.address,treasury.address,cfg.fundingMint,{
         paymentAmount:1_000_000,manifestHash:Buffer.from(prepared.manifestHash.slice(2),'hex'),ruleHash:Buffer.from(prepared.ruleHash.slice(2),'hex'),
         snapshotRoot:batch.root?byte32(BigInt(batch.root)):Buffer.alloc(32),mode:retrospective?1:0,startsAt:start,endsAt:end,
