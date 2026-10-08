@@ -11,11 +11,11 @@ assert hashlib.sha256(Path('program-binary/copus_poe_solana.so').read_bytes()).h
 assert manifest['minimumClaimMinutes']==10
 VERIFY
 rpc=https://api.devnet.solana.com
-[[ "$(solana genesis-hash --url "$rpc")" == EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG ]] || exit 1
 key="${POE_DEMO_HOME:?Private runtime required}/secrets/operator.json"
+[[ "$(solana genesis-hash --url "$rpc" --keypair "$key")" == EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG ]] || exit 1
 program=8oUVMRStpkqaFCDSdqvP4fM7AEgv4CCEqJ4gu3jsoR65
 operator=$(solana-keygen pubkey "$key")
-solana program show "$program" --url "$rpc" --output json > /tmp/copus-poe-devnet-program-info.json
+solana program show "$program" --url "$rpc" --keypair "$key" --output json > /tmp/copus-poe-devnet-program-info.json
 python3 - "$operator" <<'PY'
 import json,sys
 with open('/tmp/copus-poe-devnet-program-info.json') as f: v=json.load(f)
