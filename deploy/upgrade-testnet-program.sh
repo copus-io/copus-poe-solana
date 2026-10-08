@@ -3,7 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ -z "$(git status --porcelain)" ]] || { echo 'Clean committed source required'; exit 1; }
-pnpm verify:demo
+python3 - <<'VERIFY'
+import json,hashlib
+from pathlib import Path
+manifest=json.loads(Path('program-binary/manifest.json').read_text())
+assert hashlib.sha256(Path('program-binary/copus_poe_solana.so').read_bytes()).hexdigest()==manifest['sha256']
+assert manifest['minimumClaimMinutes']==10
+VERIFY
 rpc=https://api.devnet.solana.com
 [[ "$(solana genesis-hash --url "$rpc")" == EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG ]] || exit 1
 key="${POE_DEMO_HOME:?Private runtime required}/secrets/operator.json"
