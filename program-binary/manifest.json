@@ -1,5 +1,7 @@
 {
-  "sha256": "4f2060f3c2907215eda1d9f5685284bf8556078b9b6c9f42ef4227272976229a",
-  "programSourceCommit": "cb85e1d",
-  "network": "solana-devnet"
+  "sha256": "0d9a31f9e5c2ed83b9b15ea99f44598dda0c52f50ecf26530de942cc71cde3ab",
+  "programSourceCommit": "91a419bd1d110408cd0545cd6aa9d91f14013d53",
+  "network": "solana-devnet",
+  "minimumClaimMinutes": 10,
+  "buildWorkflowRun": 37802350691
 }
